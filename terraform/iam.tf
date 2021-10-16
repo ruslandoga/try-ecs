@@ -1,69 +1,50 @@
-resource "aws_iam_role" "ecs_role" {
-  name = "ecs_role"
+# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/instance_IAM_role.html
 
-  assume_role_policy = <<-EOF
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": {
-          "Service": "ecs-tasks.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
-      }
-    ]
+data "aws_iam_policy_document" "ecs_instance" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
   }
-  EOF
 }
 
-resource "aws_iam_role" "ecs_execution_role" {
-  name = "ecs_execution_role"
-
-  assume_role_policy = <<-EOF
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": {
-          "Service": "ecs-tasks.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
-      }
-    ]
+# needed for service discovery
+data "aws_iam_policy_document" "ec2_describe" {
+  statement {
+    actions   = ["ec2:Describe*"]
+    resources = ["*"]
   }
-  EOF
 }
 
-resource "aws_iam_policy" "ecs_policy" {
-  name = "ecs_policy"
-
-  policy = <<-EOF
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "*"
-        }
-    ]
-  }
-  EOF
+resource "aws_iam_policy" "ec2_describe" {
+  name   = "ec2_describe"
+  policy = data.aws_iam_policy_document.ec2_describe.json
 }
 
-resource "aws_iam_policy_attachment" "attach_ecs_policy" {
-  name       = "attach-ecs-policy"
-  roles      = [aws_iam_role.ecs_execution_role.name]
-  policy_arn = aws_iam_policy.ecs_policy.arn
+resource "aws_iam_role" "ecs_instance" {
+  name               = "ecs_instance_role"
+  assume_role_policy = data.aws_iam_policy_document.ecs_instance.json
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
+  role       = aws_iam_role.ecs_instance.id
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_ec2_cloudwatch_role" {
+  role       = aws_iam_role.ecs_instance.id
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_describe" {
+  role       = aws_iam_role.ecs_instance.id
+  policy_arn = aws_iam_policy.ec2_describe.id
+}
+
+resource "aws_iam_instance_profile" "ecs_instance" {
+  name = "ecs_instance"
+  role = aws_iam_role.ecs_instance.name
 }

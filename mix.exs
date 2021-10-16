@@ -20,13 +20,16 @@ defmodule E.MixProject do
   def application do
     [
       mod: {E.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: extra_applications(Mix.env())
     ]
   end
 
+  defp extra_applications(:prod), do: [:logger, :runtime_tools, :os_mon]
+  defp extra_applications(_env), do: [:logger, :runtime_tools]
+
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(_env), do: ["lib"]
 
   # Specifies your project dependencies.
   #
@@ -36,16 +39,21 @@ defmodule E.MixProject do
       {:phoenix, "~> 1.6.1"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.16.0"},
+      {:phoenix_live_view, "~> 0.17.0"},
       {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.5"},
+      {:phoenix_live_dashboard, "~> 0.6"},
       {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.18"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:libcluster, "~> 3.3"}
+      {:libcluster, "~> 3.3"},
+      {:rexbug, "~> 1.0"},
+      {:ex_aws, "~> 2.2"},
+      {:ex_aws_ec2, "~> 2.0"},
+      {:finch, "~> 0.9.0"},
+      {:sweet_xml, "~> 0.7.1"}
     ]
   end
 

@@ -7,28 +7,26 @@ defmodule E.Application do
 
   @impl true
   def start(_type, _args) do
-    topologies = [
-      ecs_app: [
-        strategy: Cluster.Strategy.DNSPoll,
-        config: [
-          polling_interval: 1000,
-          query: "ecs-test.ecs-test.local",
-          node_basename: "ecs-test"
-        ]
+    children =
+      [
+        {Finch, name: E.Finch},
+        maybe_cluster(),
+        # Start the Telemetry supervisor
+        EWeb.Telemetry,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: E.PubSub},
+        # Start the Endpoint (http/https)
+        EWeb.Endpoint
+        # Start a worker by calling: E.Worker.start_link(arg)
+        # {E.Worker, arg}
       ]
-    ]
+      |> Enum.reject(&is_nil/1)
 
-    children = [
-      {Cluster.Supervisor, [topologies, [name: E.ClusterSupervisor]]},
-      # Start the Telemetry supervisor
-      EWeb.Telemetry,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: E.PubSub},
-      # Start the Endpoint (http/https)
-      EWeb.Endpoint
-      # Start a worker by calling: E.Worker.start_link(arg)
-      # {E.Worker, arg}
-    ]
+    node = node()
+
+    unless node == :nonode@nohost do
+      :logger.update_primary_config(%{metadata: %{node: node}})
+    end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -42,5 +40,11 @@ defmodule E.Application do
   def config_change(changed, _new, removed) do
     EWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp maybe_cluster do
+    if topologies = Application.get_env(:libcluster, :topologies) do
+      {Cluster.Supervisor, [topologies, [name: E.Cluster.Supervisor]]}
+    end
   end
 end

@@ -3,12 +3,13 @@ defmodule EWeb.HealthController do
 
   def show(conn, _params) do
     json(conn, %{
-      healthy: true,
+      "healthy" => true,
+      # TODO commit sha?
       # version: List.to_string(vsn),
-      node_name: node(),
-      env: System.get_env(),
-      nodes: Node.list(),
-      cookie: Node.get_cookie()
+      "node_name" => node(),
+      # env: System.get_env(),
+      "nodes" => Node.list()
+      # cookie: Node.get_cookie()
     })
   end
 end

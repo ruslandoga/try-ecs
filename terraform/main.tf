@@ -10,13 +10,15 @@ terraform {
 }
 
 provider "aws" {
-  profile = "default"
-  region  = "eu-north-1"
+  region = "eu-north-1"
 }
 
-variable "docker_image" {
-  type    = string
-  default = "ruslandoga/test-ecs:02525f71b1e6a8ce0bde7948fabda6da3bd1021b"
+provider "aws" {
+  alias  = "asia"
+  region = "ap-southeast-1"
 }
 
-data "aws_caller_identity" "current" {}
+provider "aws" {
+  alias  = "us"
+  region = "us-west-1"
+}

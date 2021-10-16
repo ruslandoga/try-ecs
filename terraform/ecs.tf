@@ -1,108 +1,92 @@
-resource "aws_ecs_cluster" "ecs_cluster" {
-  name = "test_cluster"
-}
+# stockholm
+module "ecs_eu" {
+  source = "./ecs"
 
-# TODO EC2 SPOT
-resource "aws_ecs_task_definition" "task_definition" {
-  family                   = "test_task_another_eh2"
-  task_role_arn            = aws_iam_role.ecs_role.arn
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  requires_compatibilities = ["FARGATE"]
-  memory                   = 2048
-  cpu                      = 1024
+  iam_instance_profile = aws_iam_instance_profile.ecs_instance.id
+  vpc_id               = module.vpc_eu.vpc_id
+  ec2_subnets          = module.vpc_eu.private_subnets
+  lb_subnets           = module.vpc_eu.public_subnets
+  docker_image         = var.docker_image
+  ssh_key              = var.ssh_key
 
-  # TODO host
-  network_mode = "awsvpc"
-
-  container_definitions = <<-EOF
-  [
-    {
-      "cpu": 0,
-      "image": "${var.docker_image}",
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "${aws_cloudwatch_log_group.log_group.name}",
-          "awslogs-region": "eu-north-1",
-          "awslogs-stream-prefix": "ecs"
-        }
-      },
-      "portMappings": [
-        {
-          "hostPort": 4000,
-          "protocol": "tcp",
-          "containerPort": 4000
-        },
-        {
-          "hostPort": 4369,
-          "protocol": "tcp",
-          "containerPort": 4369
-        },
-        {
-          "hostPort": 4370,
-          "protocol": "tcp",
-          "containerPort": 4370
-        }
-      ],
-      "environment": [
-        {"name": "WEB_HOST", "value": "${aws_lb.load_balancer.dns_name}"},
-        {"name": "SECRET_KEY_BASE", "value": "7xXiSaNsw/5DHJrzT7YMArinaSAJG521GOncKdmOECUIljE6WHHGKCqyqOXmREqw"},
-        {"name": "RELEASE_COOKIE", "value": "kka+STG7DXGVweA24KXsKkb+oBVMg7RHd9t5i3KrkUD0e1GBYr2VLO1xG7p+IxFY"}
-      ],
-      "mountPoints": [],
-      "volumesFrom": [],
-      "essential": true,
-      "links": [],
-      "name": "ecs_test"
-    }
+  ec2_security_groups = [
+    module.vpc_eu.default_security_group_id,
+    module.vpc_eu_asia_peering.security_group_from_id,
+    module.vpc_eu_us_peering.security_group_from_id
   ]
-  EOF
+
+  # TODO automate
+  lb_certificate_arn = "arn:aws:acm:eu-north-1:154782911265:certificate/62f1ea26-107b-41d2-b21e-e72016191b6c"
+
+  extra_lb_security_groups = [
+    module.vpc_eu.default_security_group_id
+  ]
 }
 
-resource "aws_ecs_service" "service" {
-  name    = "test_service"
-  cluster = aws_ecs_cluster.ecs_cluster.id
+# singapore
+module "ecs_asia" {
+  source = "./ecs"
 
-  task_definition        = "arn:aws:ecs:eu-north-1:${data.aws_caller_identity.current.account_id}:task-definition/${aws_ecs_task_definition.task_definition.family}:${aws_ecs_task_definition.task_definition.revision}"
-  desired_count          = 2
-  launch_type            = "FARGATE"
-  enable_execute_command = true
+  iam_instance_profile = aws_iam_instance_profile.ecs_instance.id
+  vpc_id               = module.vpc_asia.vpc_id
+  ec2_subnets          = module.vpc_asia.private_subnets
+  lb_subnets           = module.vpc_asia.public_subnets
+  docker_image         = var.docker_image
 
-  network_configuration {
-    security_groups  = [aws_security_group.security_group.id]
-    subnets          = data.aws_subnet.default_subnet.*.id
-    assign_public_ip = true
-  }
+  ec2_security_groups = [
+    module.vpc_asia.default_security_group_id,
+    module.vpc_eu_asia_peering.security_group_to_id,
+    module.vpc_us_asia_peering.security_group_to_id
+  ]
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.lb_target_group.arn
-    container_name   = "ecs_test"
-    container_port   = "4000"
-  }
+  # TODO automate
+  lb_certificate_arn = "arn:aws:acm:ap-southeast-1:154782911265:certificate/9b35355d-f0e0-4604-84d8-a19831aa98fb"
 
-  service_registries {
-    registry_arn   = aws_service_discovery_service.service_discovery.arn
-    container_name = "ecs_test"
+  extra_lb_security_groups = [
+    module.vpc_asia.default_security_group_id
+  ]
+
+  providers = {
+    aws = aws.asia
   }
 }
 
-resource "aws_security_group" "security_group" {
-  name        = "test_app_ecs"
-  description = "Allow all outbound traffic"
-  vpc_id      = aws_vpc.main.id
+# usa
+module "ecs_us" {
+  source = "./ecs"
 
-  ingress {
-    description = "HTTP/S Traffic"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.main.cidr_block]
-  }
+  iam_instance_profile = aws_iam_instance_profile.ecs_instance.id
+  vpc_id               = module.vpc_us.vpc_id
+  ec2_subnets          = module.vpc_us.private_subnets
+  lb_subnets           = module.vpc_us.public_subnets
+  docker_image         = var.docker_image
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  ec2_security_groups = [
+    module.vpc_us.default_security_group_id,
+    module.vpc_eu_us_peering.security_group_to_id,
+    module.vpc_us_asia_peering.security_group_from_id
+  ]
+
+  # TODO automate
+  lb_certificate_arn = "arn:aws:acm:us-west-1:154782911265:certificate/6675795a-00df-4c4f-aa7a-340769ab62f2"
+
+  extra_lb_security_groups = [
+    module.vpc_us.default_security_group_id
+  ]
+
+  providers = {
+    aws = aws.us
   }
+}
+
+output "eu_lb" {
+  value = module.ecs_eu.lb_dns
+}
+
+output "asia_lb" {
+  value = module.ecs_asia.lb_dns
+}
+
+output "us_lb" {
+  value = module.ecs_us.lb_dns
 }

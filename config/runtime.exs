@@ -31,4 +31,21 @@ if config_env() == :prod do
     url: [host: System.fetch_env!("WEB_HOST"), port: 80],
     secret_key_base: secret_key_base,
     server: true
+
+  ec2_polling_interval = String.to_integer(System.get_env("EC2_POLL_INTERVAL_SECONDS") || "5")
+
+  config :libcluster,
+    topologies: [
+      aws: [
+        strategy: E.Cluster.Strategy,
+        config: [
+          app_prefix: :e,
+          name: System.get_env("EC2_NAME") || "megapool",
+          polling_interval: :timer.seconds(ec2_polling_interval),
+          regions: ["eu-north-1", "ap-southeast-1", "us-west-1"]
+        ]
+      ]
+    ]
+
+  config :logger, metadata: [:request_id, :node]
 end

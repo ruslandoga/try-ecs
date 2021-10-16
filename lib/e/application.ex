@@ -7,7 +7,19 @@ defmodule E.Application do
 
   @impl true
   def start(_type, _args) do
+    topologies = [
+      ecs_app: [
+        strategy: Cluster.Strategy.DNSPoll,
+        config: [
+          polling_interval: 1000,
+          query: "ecs-test.ecs-test.local",
+          node_basename: "ecs-test"
+        ]
+      ]
+    ]
+
     children = [
+      {Cluster.Supervisor, [topologies, [name: E.ClusterSupervisor]]},
       # Start the Telemetry supervisor
       EWeb.Telemetry,
       # Start the PubSub system

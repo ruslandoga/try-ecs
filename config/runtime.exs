@@ -42,7 +42,7 @@ if config_env() == :prod do
           app_prefix: :e,
           name: System.get_env("EC2_NAME") || "megapool",
           polling_interval: :timer.seconds(ec2_polling_interval),
-          regions: ["eu-north-1", "ap-southeast-1"]
+          regions: ["eu-north-1", "ap-southeast-1", "us-west-1"]
         ]
       ]
     ]

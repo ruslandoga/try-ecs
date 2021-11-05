@@ -13,4 +13,4 @@ ssh_key = "since"
 myip = ["95.25.207.42/32"]
 
 # docker image to deploy
-docker_image = "ruslandoga/test-ecs:19"
+docker_image = "ruslandoga/test-ecs:20"

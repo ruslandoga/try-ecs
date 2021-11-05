@@ -17,3 +17,8 @@ provider "aws" {
   alias  = "asia"
   region = "ap-southeast-1"
 }
+
+provider "aws" {
+  alias  = "us"
+  region = "us-west-1"
+}

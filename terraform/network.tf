@@ -46,149 +46,88 @@ module "vpc_asia" {
   }
 }
 
-resource "aws_vpc_peering_connection" "eu_asia_requester" {
-  vpc_id = module.vpc_eu.vpc_id
+module "vpc_us" {
+  source = "terraform-aws-modules/vpc/aws"
 
-  peer_vpc_id = module.vpc_asia.vpc_id
-  peer_region = "ap-southeast-1"
+  name = "megapool"
+  cidr = "10.2.0.0/16"
 
-  auto_accept = false
+  azs             = ["us-west-1a", "us-west-1b"]
+  private_subnets = ["10.2.1.0/24", "10.2.2.0/24"]
+  public_subnets  = ["10.2.101.0/24", "10.2.102.0/24"]
 
-  # accepter {
-  #   allow_remote_vpc_dns_resolution = true
-  # }
+  enable_nat_gateway = true
+  single_nat_gateway = true
 
-  requester {
-    allow_remote_vpc_dns_resolution = true
-  }
-
-  tags = {
-    Terraform = "true"
-    Side      = "Requester"
-  }
-}
-
-resource "aws_vpc_peering_connection_accepter" "asia_eu_accepter" {
-  provider = aws.asia
-
-  vpc_peering_connection_id = aws_vpc_peering_connection.eu_asia_requester.id
-
-  auto_accept = true
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
-    Terraform = "true"
-    Side      = "Accepter"
+    Terraform   = "true"
+    Environment = "test"
   }
 
-  accepter {
-    allow_remote_vpc_dns_resolution = true
-  }
-
-  # requester {
-  #   allow_remote_vpc_dns_resolution = true
-  # }
-}
-
-# eu <-> asia private route table routes
-
-resource "aws_route" "private_peering_eu_asia" {
-  route_table_id            = module.vpc_eu.private_route_table_ids[0]
-  destination_cidr_block    = module.vpc_asia.vpc_cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection.eu_asia_requester.id
-
-  timeouts {
-    create = "5m"
+  providers = {
+    aws = aws.us
   }
 }
 
-resource "aws_route" "private_peering_asia_eu" {
-  provider = aws.asia
+module "vpc_eu_asia_peering" {
+  source = "./peering"
 
-  route_table_id            = module.vpc_asia.private_route_table_ids[0]
-  destination_cidr_block    = module.vpc_eu.vpc_cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection.eu_asia_requester.id
+  from = {
+    vpc_id         = module.vpc_eu.vpc_id
+    route_table_id = module.vpc_eu.private_route_table_ids[0]
+    cidr_block     = module.vpc_eu.vpc_cidr_block # or "10.1.0.0/22"
+    subnets        = module.vpc_eu.private_subnets_cidr_blocks
+    region         = "eu-north-1"
+  }
 
-  timeouts {
-    create = "5m"
+  to = {
+    vpc_id         = module.vpc_asia.vpc_id
+    route_table_id = module.vpc_asia.private_route_table_ids[0]
+    cidr_block     = module.vpc_asia.vpc_cidr_block # or "10.0.0.0/22"
+    subnets        = module.vpc_asia.private_subnets_cidr_blocks
+    region         = "ap-southeast-1"
   }
 }
 
-# eu <-> asia firewalls
+module "vpc_eu_us_peering" {
+  source = "./peering"
 
-resource "aws_security_group" "allow_private_asia" {
-  name        = "allow_private_asia"
-  description = "allow private subnets from asia"
-  vpc_id      = module.vpc_eu.vpc_id
+  from = {
+    vpc_id         = module.vpc_eu.vpc_id
+    route_table_id = module.vpc_eu.private_route_table_ids[0]
+    cidr_block     = module.vpc_eu.vpc_cidr_block
+    subnets        = module.vpc_eu.private_subnets_cidr_blocks
+    region         = "eu-north-1"
+  }
 
-  ingress = [
-    {
-      description = "All traffic from private subnets in Asia"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = module.vpc_asia.private_subnets_cidr_blocks
-
-      # why do I need to specify these
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = null
-    }
-  ]
-
-  egress = [
-    {
-      description = "All traffic to private subnets in Asia"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = module.vpc_asia.private_subnets_cidr_blocks
-
-      # why do I need to specify these
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = null
-    }
-  ]
+  to = {
+    vpc_id         = module.vpc_us.vpc_id
+    route_table_id = module.vpc_us.private_route_table_ids[0]
+    cidr_block     = module.vpc_us.vpc_cidr_block
+    subnets        = module.vpc_us.private_subnets_cidr_blocks
+    region         = "us-west-1"
+  }
 }
 
-resource "aws_security_group" "allow_private_eu" {
-  provider = aws.asia
+module "vpc_us_asia_peering" {
+  source = "./peering"
 
-  name        = "allow_private_eu"
-  description = "allow private subnets from eu"
-  vpc_id      = module.vpc_asia.vpc_id
+  from = {
+    vpc_id         = module.vpc_us.vpc_id
+    route_table_id = module.vpc_us.private_route_table_ids[0]
+    cidr_block     = module.vpc_us.vpc_cidr_block
+    subnets        = module.vpc_us.private_subnets_cidr_blocks
+    region         = "us-west-1"
+  }
 
-  ingress = [
-    {
-      description = "All traffic from private subnets in EU"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = module.vpc_eu.private_subnets_cidr_blocks
-
-      # why do I need to specify these
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = null
-    }
-  ]
-
-  egress = [
-    {
-      description = "All traffic to private subnets in EU"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = module.vpc_eu.private_subnets_cidr_blocks
-
-      # why do I need to specify these
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = null
-    }
-  ]
+  to = {
+    vpc_id         = module.vpc_asia.vpc_id
+    route_table_id = module.vpc_asia.private_route_table_ids[0]
+    cidr_block     = module.vpc_asia.vpc_cidr_block
+    subnets        = module.vpc_asia.private_subnets_cidr_blocks
+    region         = "ap-southeast-1"
+  }
 }

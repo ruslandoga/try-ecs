@@ -10,7 +10,8 @@ defmodule EWeb.Endpoint do
     signing_salt: "tYc0GqON"
   ]
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options], log: :debug]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -35,7 +36,7 @@ defmodule EWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: :debug
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

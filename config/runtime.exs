@@ -28,11 +28,15 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4000")
     ],
+    # export WEB_HOST=edify.space
     url: [host: System.fetch_env!("WEB_HOST"), port: 80],
     secret_key_base: secret_key_base,
     server: true
 
   ec2_polling_interval = String.to_integer(System.get_env("EC2_POLL_INTERVAL_SECONDS") || "5")
+
+  # export EC2_REGIONS=eu-north-1,ap-southeast-1,us-west-1
+  regions = "EC2_REGIONS" |> System.fetch_env!() |> String.split(",")
 
   config :libcluster,
     topologies: [
@@ -42,10 +46,27 @@ if config_env() == :prod do
           app_prefix: :e,
           name: System.get_env("EC2_NAME") || "megapool",
           polling_interval: :timer.seconds(ec2_polling_interval),
-          regions: ["eu-north-1", "ap-southeast-1", "us-west-1"]
+          regions: regions
         ]
       ]
     ]
 
+  # TODO use cidr like in PRIMARY_SUBNET=10.0.0.0/16
+  # export PRIMARY_HOST_PREFIX=10.0.
+  config :e, primary_prefix: System.fetch_env!("PRIMARY_HOST_PREFIX")
+
+  # TODO set to read only for replicas
+  if url = System.get_env("DATABASE_URL") do
+    if url != "" do
+      config :e, E.Repo,
+        url: url,
+        pool_size: String.to_integer(System.get_env("POOL_SIZE") || "20")
+    end
+  end
+
   config :logger, metadata: [:request_id, :node]
+end
+
+if config_env() == :dev do
+  config :e, E.Repo, url: "ecto://postgres:postgres@localhost:5432/t_dev"
 end

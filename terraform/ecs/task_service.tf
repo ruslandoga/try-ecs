@@ -16,7 +16,6 @@ resource "aws_ecs_task_definition" "megapool" {
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "${aws_cloudwatch_log_group.log_group.name}",
-          "awslogs-region": "eu-north-1",
           "awslogs-stream-prefix": "ecs"
         }
       },
@@ -39,9 +38,11 @@ resource "aws_ecs_task_definition" "megapool" {
       ],
       "environment": [
         {"name": "PORT", "value": "${var.container_http_port}"},
-        {"name": "WEB_HOST", "value": "edify.space"},
-        {"name": "SECRET_KEY_BASE", "value": "${"7xXiSaNsw/5DHJrzT7YMArinaSAJG521GOncKdmOECUIljE6WHHGKCqyqOXmREqw" /* TODO read from env */}"},
-        {"name": "RELEASE_COOKIE", "value": "${"kka+STG7DXGVweA24KXsKkb+oBVMg7RHd9t5i3KrkUD0e1GBYr2VLO1xG7p+IxFY" /* TODO doesn't need to be this complex, can be name of the cluster since it's not supposed to be secret no matter what the docs say */}"}
+        {"name": "WEB_HOST", "value": "${var.web_host}"},
+        {"name": "SECRET_KEY_BASE", "value": "${var.phx_secret_key_base}"},
+        {"name": "RELEASE_COOKIE", "value": "${var.erl_release_cookie}"},
+        {"name": "EC2_REGIONS", "value": "${concat(",", var.discovery_regions)}"},
+        {"name": "PRIMARY_HOST_PREFIX", "value": "${var.primary_host_prefix}"}
       ],
       "essential": true,
       "name": "${"elixir-test" /* TODO */}"

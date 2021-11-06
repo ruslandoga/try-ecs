@@ -1,3 +1,9 @@
+locals {
+  discovery_regions   = ["eu-north-1", "ap-southeast-1", "us-west-1"]
+  primary_host_prefix = "10.0." # since primary db is in 10.0.0.0/16
+  web_host            = "edify.space"
+}
+
 # stockholm
 module "ecs_eu" {
   source = "./ecs"
@@ -9,11 +15,18 @@ module "ecs_eu" {
   docker_image         = var.docker_image
   ssh_key              = var.ssh_key
 
+  discovery_regions   = local.discovery_regions
+  primary_host_prefix = local.primary_host_prefix
+  web_host            = local.web_host
+
   ec2_security_groups = [
     module.vpc_eu.default_security_group_id,
     module.vpc_eu_asia_peering.security_group_from_id,
     module.vpc_eu_us_peering.security_group_from_id
   ]
+
+  # primary
+  database_url = ""
 
   # TODO automate
   lb_certificate_arn = "arn:aws:acm:eu-north-1:154782911265:certificate/62f1ea26-107b-41d2-b21e-e72016191b6c"
@@ -33,11 +46,18 @@ module "ecs_asia" {
   lb_subnets           = module.vpc_asia.public_subnets
   docker_image         = var.docker_image
 
+  discovery_regions   = local.discovery_regions
+  primary_host_prefix = local.primary_host_prefix
+  web_host            = local.web_host
+
   ec2_security_groups = [
     module.vpc_asia.default_security_group_id,
     module.vpc_eu_asia_peering.security_group_to_id,
     module.vpc_us_asia_peering.security_group_to_id
   ]
+
+  # replica
+  database_url = ""
 
   # TODO automate
   lb_certificate_arn = "arn:aws:acm:ap-southeast-1:154782911265:certificate/9b35355d-f0e0-4604-84d8-a19831aa98fb"
@@ -61,11 +81,18 @@ module "ecs_us" {
   lb_subnets           = module.vpc_us.public_subnets
   docker_image         = var.docker_image
 
+  discovery_regions   = local.discovery_regions
+  primary_host_prefix = local.primary_host_prefix
+  web_host            = local.web_host
+
   ec2_security_groups = [
     module.vpc_us.default_security_group_id,
     module.vpc_eu_us_peering.security_group_to_id,
     module.vpc_us_asia_peering.security_group_from_id
   ]
+
+  # replica
+  database_url = ""
 
   # TODO automate
   lb_certificate_arn = "arn:aws:acm:us-west-1:154782911265:certificate/6675795a-00df-4c4f-aa7a-340769ab62f2"

@@ -11,14 +11,12 @@ defmodule E.Application do
       [
         {Finch, name: E.Finch},
         maybe_cluster(),
-        # Start the Telemetry supervisor
-        EWeb.Telemetry,
-        # Start the PubSub system
         {Phoenix.PubSub, name: E.PubSub},
-        # Start the Endpoint (http/https)
+        if E.Repo.config()[:database] do
+          E.Repo
+        end,
+        EWeb.Telemetry,
         EWeb.Endpoint
-        # Start a worker by calling: E.Worker.start_link(arg)
-        # {E.Worker, arg}
       ]
       |> Enum.reject(&is_nil/1)
 

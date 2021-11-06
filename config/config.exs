@@ -14,6 +14,8 @@ config :e, EWeb.Endpoint,
   pubsub_server: E.PubSub,
   live_view: [signing_salt: "ZUNgq3rr"]
 
+config :e, ecto_repos: [E.Repo]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.12.18",

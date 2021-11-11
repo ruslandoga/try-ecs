@@ -171,7 +171,7 @@ PING 10.1.2.233 (10.1.2.233) 56(84) bytes of data.
 rtt min/avg/max/mdev = 175.658/175.671/175.699/0.548 ms
 ```
 
-pubsub benchmark shows almost 2x cut in performance, probably because there are 2x number of nodes
+pubsub benchmark shows almost ~2x cut in performance, probably because there are 3x number of nodes (before: 2 nodes before, with pubsub on one node sending messages to one other node, new: 4 nodes, with pubsub on one node sending messages to three other nodes)
 
 ```elixir
 iex(e@10.0.1.92)1> Phoenix.PubSub.subscribe(E.PubSub, "topic")

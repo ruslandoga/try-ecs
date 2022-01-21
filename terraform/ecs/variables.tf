@@ -43,3 +43,32 @@ variable "ec2_security_groups" {
   type    = list(string)
   default = []
 }
+
+variable "database_url" {
+  type = string
+}
+
+variable "discovery_regions" {
+  type = list(string)
+}
+
+variable "primary_host_prefix" {
+  type = string
+}
+
+variable "erl_release_cookie" {
+  type = string
+
+  # TODO doesn't need to be this complex, can be name of the cluster, network is already private
+  default = "kka+STG7DXGVweA24KXsKkb+oBVMg7RHd9t5i3KrkUD0e1GBYr2VLO1xG7p+IxFY"
+}
+
+variable "phx_secret_key_base" {
+  type = string
+  # TODO needs to be secret
+  default = "7xXiSaNsw/5DHJrzT7YMArinaSAJG521GOncKdmOECUIljE6WHHGKCqyqOXmREqw"
+}
+
+variable "web_host" {
+  type = string
+}

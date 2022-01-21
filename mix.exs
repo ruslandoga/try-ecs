@@ -53,7 +53,9 @@ defmodule E.MixProject do
       {:ex_aws, "~> 2.2"},
       {:ex_aws_ec2, "~> 2.0"},
       {:finch, "~> 0.9.0"},
-      {:sweet_xml, "~> 0.7.1"}
+      {:sweet_xml, "~> 0.7.1"},
+      {:ecto_sql, "~> 3.7"},
+      {:postgrex, ">= 0.0.0"}
     ]
   end
 
